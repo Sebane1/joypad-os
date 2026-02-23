@@ -632,6 +632,14 @@ void btstack_host_power_on(void)
 
 static uint32_t scan_timeout_end = 0;  // 0 = no timeout (indefinite scan)
 
+#ifdef BTSTACK_USE_ESP32
+// Deferred requests: button handler runs on main task but BTstack APIs must run in BTstack task.
+// Main task sets these; btstack_host_process() runs the actual calls.
+static volatile uint32_t pending_timed_scan_ms = 0;
+static volatile uint8_t pending_disconnect_clear = 0;
+static volatile uint8_t pending_wifi_restart = 0;
+#endif
+
 // Pending BLE gamepad: when we see a gamepad appearance or HID UUID but no name in the
 // ADV packet, stash the address and wait for the scan response (which typically contains
 // the name). This prevents connecting to Xbox controllers as "Generic BLE Gamepad".
@@ -703,6 +711,24 @@ void btstack_host_start_timed_scan(uint32_t timeout_ms)
     btstack_host_start_scan();
 }
 
+#ifdef BTSTACK_USE_ESP32
+// Request deferred execution from main task (button callback). Actual work runs in BTstack task.
+void btstack_host_request_timed_scan(uint32_t timeout_ms)
+{
+    pending_timed_scan_ms = timeout_ms;
+}
+void btstack_host_request_disconnect_clear(void)
+{
+    pending_disconnect_clear = 1;
+}
+bool btstack_host_consume_pending_wifi_restart(void)
+{
+    if (!pending_wifi_restart) return false;
+    pending_wifi_restart = 0;
+    return true;
+}
+#endif
+
 // ============================================================================
 // CONNECTION
 // ============================================================================
@@ -759,6 +785,23 @@ void btstack_host_process(void)
 
     // Process transport-specific tasks (e.g., USB polling, CYW43 async context)
     btstack_host_transport_process();
+
+#ifdef BTSTACK_USE_ESP32
+    // Run deferred button actions in BTstack task context (main task must not call gap_* etc.)
+    if (pending_timed_scan_ms != 0) {
+        uint32_t t = pending_timed_scan_ms;
+        pending_timed_scan_ms = 0;
+        printf("[BTSTACK_HOST] Deferred: starting timed scan %lu ms\n", (unsigned long)t);
+        btstack_host_start_timed_scan(t);
+    }
+    if (pending_disconnect_clear) {
+        pending_disconnect_clear = 0;
+        printf("[BTSTACK_HOST] Deferred: disconnect all + clear bonds\n");
+        btstack_host_disconnect_all_devices();
+        btstack_host_delete_all_bonds();
+        pending_wifi_restart = 1;
+    }
+#endif
 
 #if !defined(BTSTACK_USE_CYW43) && !defined(BTSTACK_USE_ESP32)
     // Process BTstack run loop multiple times to let packets flow through HCI->L2CAP->ATT->GATT
@@ -1460,7 +1503,7 @@ static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packe
 
                     if (classic_state.pending_outgoing) {
                         // Outgoing connection (we initiated)
-                        printf("[BTSTACK_HOST] Outgoing ACL complete, COD=0x%06X\n", cod);
+                        printf("[BTSTACK_HOST] Outgoing ACL complete, COD=0x%06lX\n", (unsigned long)cod);
 
                         // For Wiimotes, store ACL handle and do L2CAP-specific setup
                         if (classic_state.pending_hid_connect && wiimote_conn.active) {
@@ -1489,7 +1532,7 @@ static void packet_handler(uint8_t packet_type, uint16_t channel, uint8_t *packe
                         }
                     } else {
                         // Incoming connection (device connected to us)
-                        printf("[BTSTACK_HOST] Incoming ACL complete, COD=0x%06X\n", cod);
+                        printf("[BTSTACK_HOST] Incoming ACL complete, COD=0x%06lX\n", (unsigned long)cod);
                         classic_state.pending_acl_handle = handle;
 
                         // Detect direct L2CAP device by pending profile (if available from prior inquiry).

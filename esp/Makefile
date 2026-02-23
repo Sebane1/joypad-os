@@ -1,7 +1,7 @@
 # Joypad ESP32-S3 bt2usb Build System
 # Board selection via BOARD variable (default: devkit)
 
-.PHONY: init build flash monitor clean menuconfig help uf2
+.PHONY: init build flash flash-wipe monitor clean menuconfig help uf2
 
 # Default board
 BOARD ?= devkit
@@ -52,6 +52,14 @@ flash: build
 		0xe000 $(OTA_DATA) \
 		0x10000 $(BUILD_APP)
 
+# Wipe all flash (including NVS config) then flash. Use when stuck in XInput (no serial).
+# Example: make flash-wipe PORT=COM78
+flash-wipe:
+	@echo "Erasing full flash (wipes saved config: USB mode, bonds, etc.)..."
+	$(IDF_ENV) idf.py $(if $(PORT),-p $(PORT),) erase-flash
+	@echo "Flashing firmware..."
+	$(IDF_ENV) SDKCONFIG_DEFAULTS="$(SDKCONFIG_FILES)" idf.py $(if $(PORT),-p $(PORT),) flash
+
 monitor:
 	@echo "Opening serial monitor"
 	@echo "NOTE: Use Ctrl+] to exit"
@@ -78,14 +86,19 @@ uf2: build
 devkit:
 	@$(MAKE) BOARD=devkit build
 
+pocket_dongle_s3:
+	@$(MAKE) BOARD=pocket_dongle_s3 build
+
 # Help
 help:
 	@echo "Joypad ESP32-S3 Build Commands:"
 	@echo ""
 	@echo "  make [BOARD=devkit]  - Build for specified board (default: devkit)"
 	@echo "  make devkit          - Build for ESP32-S3 DevKit"
+	@echo "  make pocket_dongle_s3 - Build for Pocket-Dongle-S3 / T-Dongle S3 (16MB flash)"
 	@echo ""
 	@echo "  make flash [BOARD=...] - Flash app via esptool (requires TinyUF2 bootloader)"
+	@echo "  make flash-wipe [PORT=COMx] - Erase full flash then flash (resets USB mode/config)"
 	@echo "  make monitor           - Monitor serial output"
 	@echo "  make uf2               - Build + generate .uf2 for drag-and-drop update"
 	@echo "  make clean             - Clean build files"

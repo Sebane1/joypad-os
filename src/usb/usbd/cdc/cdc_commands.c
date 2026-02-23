@@ -4,6 +4,7 @@
 
 #include "cdc_commands.h"
 #include "cdc_protocol.h"
+#include "cdc.h"
 #include "../usbd.h"
 #include "app.h"
 #include "core/services/storage/flash.h"
@@ -52,9 +53,7 @@ static volatile uint16_t log_tail = 0;  // Read position
 
 static void log_stdio_out_chars(const char *buf, int len)
 {
-    // Skip ring buffer writes when not streaming — zero overhead on normal path
-    if (!protocol_ctx.log_streaming) return;
-
+    // Always capture to ring so config.joypad.ai Log shows messages once user enables Debug Stream
     for (int i = 0; i < len; i++) {
         uint16_t next = (log_head + 1) % LOG_BUF_SIZE;
         if (next == log_tail) {
@@ -77,6 +76,10 @@ static int esp32_log_writefn(void *cookie, const char *buf, int len)
     log_stdio_out_chars(buf, len);
     if (esp32_uart_stdout) {
         fwrite(buf, 1, len, esp32_uart_stdout);
+    }
+    /* Also send to USB CDC so opening the dongle's COM port shows printf (e.g. button debug). */
+    if (len > 0 && cdc_data_connected()) {
+        cdc_data_write((const uint8_t *)buf, (uint32_t)len);
     }
     return len;
 }
@@ -1215,6 +1218,42 @@ void cdc_commands_task(void)
     }
 }
 
+// Send one log line immediately as a protocol event (so config.joypad.ai Log shows it)
+void cdc_commands_send_log_line(const char* msg)
+{
+    if (!msg || !cdc_data_connected()) return;
+    size_t len = strlen(msg);
+    if (len > 200) len = 200;  // fit in log_event_buf (384) with escaping
+    int pos = 0;
+    pos += snprintf(log_event_buf + pos, sizeof(log_event_buf) - pos,
+                    "{\"type\":\"log\",\"msg\":\"");
+    for (size_t i = 0; i < len && pos < (int)sizeof(log_event_buf) - 10; i++) {
+        char c = msg[i];
+        if (c == '\\') {
+            log_event_buf[pos++] = '\\';
+            log_event_buf[pos++] = '\\';
+        } else if (c == '"') {
+            log_event_buf[pos++] = '\\';
+            log_event_buf[pos++] = '"';
+        } else if (c == '\n') {
+            log_event_buf[pos++] = '\\';
+            log_event_buf[pos++] = 'n';
+        } else if (c == '\r') {
+            log_event_buf[pos++] = '\\';
+            log_event_buf[pos++] = 'r';
+        } else if (c == '\t') {
+            log_event_buf[pos++] = '\\';
+            log_event_buf[pos++] = 't';
+        } else if (c >= 0x20) {
+            log_event_buf[pos++] = c;
+        }
+    }
+    log_event_buf[pos++] = '"';
+    log_event_buf[pos++] = '}';
+    log_event_buf[pos] = '\0';
+    cdc_protocol_send_event(&protocol_ctx, log_event_buf);
+}
+
 // ============================================================================
 // COMMAND DISPATCH
 // ============================================================================
@@ -1292,6 +1331,9 @@ static void packet_handler(const cdc_packet_t* packet)
     for (const cmd_entry_t* entry = commands; entry->name; entry++) {
         if (strcmp(cmd, entry->name) == 0) {
             entry->handler(json);
+            // Auto-enable log streaming when config app sends any command (e.g. INFO on connect)
+            // so the Log panel shows output without requiring a separate "Start Stream" click
+            protocol_ctx.log_streaming = true;
             return;
         }
     }

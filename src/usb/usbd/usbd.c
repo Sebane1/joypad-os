@@ -447,6 +447,10 @@ bool usbd_set_mode(usb_output_mode_t mode)
     // Trigger device reset to re-enumerate with new descriptors
     printf("[usbd] Resetting device for re-enumeration...\n");
     flush_debug_output();
+    // Short delay so UI (e.g. LCD "Btn: Mode") can update before reboot
+    platform_sleep_ms(200);
+    printf("[usbd] Calling platform_reboot() now.\n");
+    flush_debug_output();
     platform_reboot();
 
     return true;  // Never reached
@@ -732,6 +736,9 @@ void usbd_task(void)
 #else
     tud_task();
 #endif
+
+    // Always process CDC so config.joypad.ai Log (debug stream) works in every USB mode that exposes CDC
+    cdc_task();
 
     switch (output_mode) {
         case USB_OUTPUT_MODE_XBOX_ORIGINAL: {

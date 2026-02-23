@@ -35,6 +35,10 @@ void cdc_commands_send_connect_event(uint8_t port, const char* name,
                                      uint16_t vid, uint16_t pid);
 void cdc_commands_send_disconnect_event(uint8_t port);
 
+// Send a log line immediately as a protocol event (for config.joypad.ai Log).
+// Use from button handler etc. so events appear even if printf/ring path is delayed.
+void cdc_commands_send_log_line(const char* msg);
+
 #ifdef __cplusplus
 }
 #endif

@@ -9,8 +9,8 @@
 #include "core/router/router.h"
 #include "core/buttons.h"
 #include "core/input_event.h"
+#include "platform/platform.h"
 
-#include "pico/stdlib.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -134,7 +134,7 @@ static int find_or_create_controller(uint32_t ip, uint16_t port)
     controllers[slot].ip = ip;
     controllers[slot].port = port;
     controllers[slot].last_seq = 0;
-    controllers[slot].last_seen_ms = to_ms_since_boot(get_absolute_time());
+    controllers[slot].last_seen_ms = platform_time_ms();
     controllers[slot].packet_count = 0;
     controllers[slot].drop_count = 0;
     connected_count++;
@@ -150,7 +150,7 @@ static int find_or_create_controller(uint32_t ip, uint16_t port)
 
 static void check_controller_timeouts(void)
 {
-    uint32_t now = to_ms_since_boot(get_absolute_time());
+    uint32_t now = platform_time_ms();
 
     for (int i = 0; i < MAX_CONTROLLERS; i++) {
         if (controllers[i].active) {
@@ -180,7 +180,7 @@ bool jocp_process_input_packet(const uint8_t* data, uint16_t len,
 {
     // Check timeouts periodically
     static uint32_t last_timeout_check = 0;
-    uint32_t now = to_ms_since_boot(get_absolute_time());
+    uint32_t now = platform_time_ms();
     if (now - last_timeout_check > 1000) {
         check_controller_timeouts();
         last_timeout_check = now;
@@ -301,7 +301,7 @@ void jocp_send_feedback(uint8_t controller_id, const output_feedback_t* fb)
     if (!fb) return;
 
     // Rate limit feedback to avoid overwhelming the TCP connection
-    uint32_t now = to_ms_since_boot(get_absolute_time());
+    uint32_t now = platform_time_ms();
     if (now - last_feedback_ms[controller_id] < FEEDBACK_INTERVAL_MS) {
         return;
     }
@@ -325,7 +325,7 @@ void jocp_send_feedback(uint8_t controller_id, const output_feedback_t* fb)
         header->msg_type = JOCP_MSG_OUTPUT_CMD;
         header->seq = 0;  // Not used for output
         header->flags = 0;
-        header->timestamp_us = time_us_32();
+        header->timestamp_us = platform_time_us();
 
         // Rumble command
         uint8_t* cmd = packet + sizeof(jocp_header_t);
@@ -354,7 +354,7 @@ void jocp_send_feedback(uint8_t controller_id, const output_feedback_t* fb)
         header->msg_type = JOCP_MSG_OUTPUT_CMD;
         header->seq = 0;
         header->flags = 0;
-        header->timestamp_us = time_us_32();
+        header->timestamp_us = platform_time_us();
 
         uint8_t* cmd = packet + sizeof(jocp_header_t);
         cmd[0] = JOCP_CMD_RGB_LED;

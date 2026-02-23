@@ -187,6 +187,7 @@ help:
 	@echo "  make bt2usb_esp32s3     - Bluetooth -> USB HID (ESP32-S3, requires ESP-IDF)"
 	@echo "  make uf2-bt2usb_esp32s3       - Build + generate .uf2 for drag-and-drop update"
 	@echo "  make flash-uf2-bt2usb_esp32s3 - Build + flash .uf2 via TinyUF2 drive"
+	@echo "  make bt2usb_esp32s3_pocket_dongle_s3 - Same for Pocket-Dongle-S3 / T-Dongle S3 (16MB)"
 	@echo "  make wifi2usb_pico_w    - WiFi -> USB HID (Pico W)"
 	@echo "  make snes2usb_kb2040    - SNES -> USB HID (KB2040)"
 	@echo "  make n642usb_kb2040     - N64 -> USB HID (KB2040)"
@@ -366,23 +367,37 @@ bt2usb_pico2_w:
 	$(call build_app,bt2usb_pico2_w)
 
 # --- ESP32-S3 bt2usb (requires ESP-IDF) ---
+# Use BOARD=devkit (default) or BOARD=pocket_dongle_s3 for Pocket-Dongle-S3 / T-Dongle S3
 .PHONY: bt2usb_esp32s3
 bt2usb_esp32s3:
-	@echo "$(YELLOW)Building bt2usb for ESP32-S3...$(NC)"
-	@cd esp && $(MAKE) build
+	@echo "$(YELLOW)Building bt2usb for ESP32-S3 (BOARD=$(if $(BOARD),$(BOARD),devkit))...$(NC)"
+	@cd esp && $(MAKE) build BOARD=$(if $(BOARD),$(BOARD),devkit)
 	@echo "$(GREEN)✓ bt2usb_esp32s3 built successfully$(NC)"
 	@echo ""
 
 .PHONY: flash-bt2usb_esp32s3
 flash-bt2usb_esp32s3:
-	@echo "$(YELLOW)Flashing bt2usb to ESP32-S3...$(NC)"
-	@cd esp && $(MAKE) flash
+	@echo "$(YELLOW)Flashing bt2usb to ESP32-S3 (BOARD=$(if $(BOARD),$(BOARD),devkit))...$(NC)"
+	@cd esp && $(MAKE) flash BOARD=$(if $(BOARD),$(BOARD),devkit)
 	@echo "$(GREEN)✓ bt2usb_esp32s3 flashed successfully$(NC)"
 	@echo ""
 
 .PHONY: monitor-bt2usb_esp32s3
 monitor-bt2usb_esp32s3:
-	@cd esp && $(MAKE) monitor
+	@cd esp && $(MAKE) monitor BOARD=$(if $(BOARD),$(BOARD),devkit)
+
+# Pocket-Dongle-S3 / T-Dongle S3 (0.96" display, 16MB flash, N16R8)
+.PHONY: bt2usb_esp32s3_pocket_dongle_s3
+bt2usb_esp32s3_pocket_dongle_s3:
+	@$(MAKE) bt2usb_esp32s3 BOARD=pocket_dongle_s3
+
+.PHONY: flash-bt2usb_esp32s3_pocket_dongle_s3
+flash-bt2usb_esp32s3_pocket_dongle_s3:
+	@$(MAKE) flash-bt2usb_esp32s3 BOARD=pocket_dongle_s3
+
+.PHONY: monitor-bt2usb_esp32s3_pocket_dongle_s3
+monitor-bt2usb_esp32s3_pocket_dongle_s3:
+	@$(MAKE) monitor-bt2usb_esp32s3 BOARD=pocket_dongle_s3
 
 # --- ESP32-S3 UF2 / Combined targets ---
 .PHONY: uf2-bt2usb_esp32s3

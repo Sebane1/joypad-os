@@ -14,6 +14,8 @@ Joypad OS supports ESP32-S3 as a build target for the **BT2USB** app. The ESP32-
 
 **BLE-only limitation:** ESP32-S3 only supports BLE controllers. Classic Bluetooth controllers (like DualShock 3 in BT mode) will not work. Most modern controllers support BLE.
 
+**WiFi (JOCP):** The ESP32-S3 bt2usb firmware also accepts controller input over WiFi using the same JOCP protocol as the Pico W wifi2usb app. The dongle runs a WiFi access point (SSID `JOYPAD-XXXX`, password derived from MAC); connect your phone or a JOCP-capable controller app and send input to the dongle’s IP (192.168.4.1) on UDP port 30100. **Click** the BOOT button to make the SSID visible for 30 seconds (pairing mode). **Hold** the button to restart the WiFi AP. BLE and WiFi inputs are merged to the same USB output.
+
 ### Supported Controllers (BLE)
 
 | Controller | Status |
@@ -44,6 +46,9 @@ These controllers pair over Classic BT and require the Pico W build.
 |---|---|---|---|
 | Seeed XIAO ESP32-S3 | 8MB | Tested | User LED on GPIO 21 (active low) |
 | ESP32-S3-DevKitC | Varies | Should work | Untested |
+| **Pocket-Dongle-S3 / T-Dongle S3** (N16R8) | 16MB | Supported | 0.96" ST7735, 8MB PSRAM, Boot on GPIO 0. Use `BOARD=pocket_dongle_s3` or `make bt2usb_esp32s3_pocket_dongle_s3`. |
+
+Any ESP32-S3 board with USB OTG should work. Board-specific pin configurations (LED GPIO, button GPIO) can be overridden via sdkconfig.
 
 ### Why ESP32-S3?
 
@@ -136,18 +141,16 @@ make uf2-bt2usb_esp32s3
 
 ### Prerequisites
 
-```bash
-# One-time setup: install ESP-IDF and tools
-make init-esp
-```
+**Option 1 (Unix):** From repo root, `make init-esp` clones ESP-IDF v6.0 to `~/esp-idf` and installs the ESP32-S3 toolchain. If you already have ESP-IDF installed, it will skip the clone and just install tools.
 
-This clones ESP-IDF v6.0 to `~/esp-idf` and installs the ESP32-S3 toolchain. If you already have ESP-IDF installed, it will skip the clone and just install tools.
+**Option 2 (manual):** Install ESP-IDF (v5.5.x or v6.x). Releases: [ESP-IDF GitHub Releases](https://github.com/espressif/esp-idf/releases) (e.g. [v5.5.3](https://github.com/espressif/esp-idf/releases/tag/v5.5.3)). Clone with `git clone -b v5.5.3 --recursive https://github.com/espressif/esp-idf.git`, then run `install.sh esp32s3` and use the environment’s `export.sh` / `export.bat`. On Windows with the official installer, open **"ESP-IDF 5.5 CMD"** or **"ESP-IDF 6.0 CMD"** so that `idf.py` is in your PATH.
 
 ### Build Commands
 
 From the repo root:
 
 ```bash
+# Default board: devkit
 make bt2usb_esp32s3                 # Build
 make uf2-bt2usb_esp32s3             # Build + generate .uf2
 make flash-uf2-bt2usb_esp32s3       # Build + flash .uf2 via TinyUF2 drive
@@ -155,15 +158,38 @@ make flash-bt2usb_esp32s3           # Build + flash via esptool
 make monitor-bt2usb_esp32s3         # UART serial monitor (Ctrl+] to exit)
 ```
 
+**Pocket-Dongle-S3 / LilyGo T-Dongle S3** (0.96" display, 16MB Flash, N16R8):
+
+From a shell where ESP-IDF is loaded (e.g. Git Bash after `source ~/esp-idf/export.sh`, or WSL):
+
+```bash
+make bt2usb_esp32s3_pocket_dongle_s3     # Build for Pocket-Dongle-S3
+make flash-bt2usb_esp32s3_pocket_dongle_s3
+make monitor-bt2usb_esp32s3_pocket_dongle_s3
+# Or with BOARD= for any target:
+make bt2usb_esp32s3 BOARD=pocket_dongle_s3
+make flash-bt2usb_esp32s3 BOARD=pocket_dongle_s3
+```
+
+**Windows (ESP-IDF CMD):** Open **"ESP-IDF 5.5 CMD"** or **"ESP-IDF 6.0 CMD"** (or run `export.bat` from your ESP-IDF install), then:
+
+```cmd
+cd path\to\joypad-os\esp
+build_pocket_dongle_s3.bat
+```
+Then plug the dongle and run `build_pocket_dongle_s3.bat flash`. For serial monitor: `build_pocket_dongle_s3.bat monitor`.
+
 Or from the `esp/` directory:
 
 ```bash
 cd esp
-source env.sh                       # Activate ESP-IDF environment
-make build                          # Build
-make uf2                            # Build + generate .uf2
-make flash                          # Build + flash via esptool
-make monitor                        # UART serial monitor
+make init                          # Install ESP-IDF (if not done from root)
+source env.sh                      # Activate ESP-IDF environment
+make build                         # default BOARD=devkit
+make pocket_dongle_s3              # build for Pocket-Dongle-S3
+make uf2                           # Build + generate .uf2
+make flash [BOARD=pocket_dongle_s3]
+make monitor
 ```
 
 ### Board Configurations
@@ -193,16 +219,43 @@ cd esp && make BOARD=myboard build
 | Triple-click | Reset to default HID mode |
 | Hold | Disconnect all devices and clear bonds |
 
-### Status LED
+### Status: LCD vs LED
 
-| LED State | Meaning |
-|---|---|
-| Blinking | No device connected (scanning/idle) |
-| Solid on | Device connected |
+**Pocket-Dongle-S3 / T-Dongle S3** (and other boards with the 0.96" ST7735) have **no status LED** — they use the **LCD screen** only. The display shows "Joypad OS", the current **USB output mode** (e.g. HID, XInput), and a **status line**: **"Scanning..."** (animated dots) when looking for controllers, **"1 controller"** / **"2 controllers"** when connected, or **"Ready"** when idle. Put your controller in BLE pairing mode while the screen shows "Scanning..." to pair.
+
+**Other boards** (e.g. XIAO ESP32-S3, DevKit) may have an LED: blinking = scanning/idle, solid = device connected.
 
 ### USB Output Modes
 
 Double-click the button to cycle through output modes: XInput, DInput, Switch, PS3, PS4/PS5.
+
+### Reset config when stuck (e.g. XInput, no serial)
+
+In XInput (and some other USB modes) the device does not expose a CDC serial port, so you cannot change settings or send the `BOOTLOADER` command over USB. To get back to a configurable state:
+
+1. **Erase full flash then reflash** (wipes NVS: USB mode, bonds, all settings):
+   - **From esp/ (Unix):** `make flash-wipe PORT=COM78` (use your port).
+   - **Windows / any:**  
+     `idf.py -p COM78 erase-flash`  
+     then  
+     `idf.py -p COM78 flash`
+
+2. After flashing, the device starts with default config (e.g. HID mode with serial), so you can use the serial monitor and the button again.
+
+**Mode switch:** USB output mode is changed by **double-clicking** the BOOT button (two quick presses within ~450 ms). Single click starts BLE scan; double-click cycles XInput → DInput → Switch → PS3 → PS4/PS5.
+
+**Button not responding?** The LCD shows a debug line `GPxx: H` or `GPxx: L` (e.g. `GP00: H`). **H** = pin high (released), **L** = pin low (pressed). If pressing the button never changes it to **L**, the button is likely on a different GPIO. Run `idf.py menuconfig` → **Component config** → **Button** → set **User button GPIO** to the correct pin (e.g. 1 or 9 on some boards), then rebuild and reflash.
+
+### Viewing logs in config.joypad.ai
+
+[config.joypad.ai](https://config.joypad.ai/) talks to the device over the CDC serial interface. The **Log** section shows debug output (e.g. `[button] Event: CLICK`) only when **Debug Stream** is enabled:
+
+1. Connect the device in the web app (Connect → choose the Joypad serial port).
+2. Open the **Log** section (bottom of the page).
+3. Click **Start Stream** (or enable **Debug Stream**) so the device starts sending log events.
+4. Button presses and other `printf` output will then appear in the log.
+
+The device must be in a USB mode that exposes CDC (e.g. **SInput** or **HID**). In **XInput** mode the device often does not expose a serial port, so the config tool cannot connect.
 
 ### CDC Serial Commands
 

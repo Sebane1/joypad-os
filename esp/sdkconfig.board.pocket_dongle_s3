@@ -1,0 +1,25 @@
+# Pocket-Dongle-S3 / LilyGo T-Dongle S3 (N16R8) board overrides
+# 0.96" ST7735 IPS LCD, 16MB Flash, 8MB PSRAM, Boot button, TF card
+# Compatible with: ESP32-S3 Pocket-Dongle-S3 N16R8, LILYGO T-Dongle S3
+
+# 16MB Flash (N16R8)
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+
+# User/Boot button GPIO. Schematic: Pin 4 = CHIP_UP, Pins 5-14 = GPIO0-GPIO9.
+# Button on GPIO 9 (Pin 14) - confirmed for this board.
+CONFIG_BUTTON_USER_GPIO=9
+
+# Optional: 8MB PSRAM (N16R8) - enable if your app needs it
+# CONFIG_SPIRAM=y
+# CONFIG_SPIRAM_MODE_OCT=y
+
+# Display ST7735: Schematic B (MOSI=11, SCLK=10, CS=12, DC=13, RST=14, BL=8). When it worked, display used this.
+CONFIG_DISPLAY_ST7735_PINOUT_SCHEMATIC_B=y
+# CONFIG_DISPLAY_ST7735_PINOUT_LILYGO is not set
+# CONFIG_DISPLAY_ST7735_PANEL_OFFSET_0_0 is not set
+CONFIG_DISPLAY_ST7735_SPI_MODE_3=y
+# Skip raw fill test to avoid init hang on some boards
+CONFIG_DISPLAY_ST7735_RAW_FILL_TEST=n
+# Normal (unrotated) text so "Joypad OS" etc. show as readable Latin
+# CONFIG_DISPLAY_ST7735_TEXT_ROTATE_90 is not set

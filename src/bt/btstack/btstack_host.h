@@ -48,6 +48,14 @@ void btstack_host_stop_scan(void);
 // Start scanning with a timeout (auto-stops after timeout_ms)
 void btstack_host_start_timed_scan(uint32_t timeout_ms);
 
+#ifdef BTSTACK_USE_ESP32
+// Deferred requests: call from main task (e.g. button handler); work runs in BTstack task.
+void btstack_host_request_timed_scan(uint32_t timeout_ms);
+void btstack_host_request_disconnect_clear(void);
+// Returns true once after disconnect_clear was run; app should call wifi_transport_restart() and not call again.
+bool btstack_host_consume_pending_wifi_restart(void);
+#endif
+
 // Connect to a BLE device
 void btstack_host_connect_ble(bd_addr_t addr, bd_addr_type_t addr_type);
 

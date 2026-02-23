@@ -8,8 +8,10 @@
 #include "driver/gpio.h"
 #include <stdio.h>
 
-// Button GPIO pin (can be overridden via Kconfig/compile definition)
-#ifndef BUTTON_USER_GPIO
+// Button GPIO pin: Kconfig CONFIG_BUTTON_USER_GPIO or compile-time override
+#if defined(CONFIG_BUTTON_USER_GPIO)
+#define BUTTON_USER_GPIO CONFIG_BUTTON_USER_GPIO
+#elif !defined(BUTTON_USER_GPIO)
 #define BUTTON_USER_GPIO 0  // BOOT button on most ESP32-S3 dev boards
 #endif
 

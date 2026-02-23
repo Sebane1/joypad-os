@@ -36,7 +36,7 @@ typedef void (*button_callback_t)(button_event_t event);
 // Timing configuration (in milliseconds)
 #define BUTTON_DEBOUNCE_MS      20    // Debounce time
 #define BUTTON_CLICK_MAX_MS     500   // Max press duration for a click
-#define BUTTON_DOUBLE_CLICK_MS  300   // Max gap between clicks for double-click
+#define BUTTON_DOUBLE_CLICK_MS  450   // Max gap between clicks for double-click
 #define BUTTON_HOLD_MS          1500  // Hold duration to trigger hold event
 
 // ============================================================================

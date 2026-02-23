@@ -1,0 +1,78 @@
+# Main component Kconfig
+
+menu "Button"
+config BUTTON_USER_GPIO
+    int "User button GPIO (BOOT button on most boards)"
+    default 0
+    range 0 48
+    help
+        GPIO pin for the user/Boot button. Pocket-Dongle-S3 uses GPIO 9.
+endmenu
+
+menu "Display (ST7735 80x160)"
+
+choice DISPLAY_ST7735_PINOUT
+    prompt "LCD pinout"
+    default DISPLAY_ST7735_PINOUT_SCHEMATIC
+    help
+        Select the wiring used by your board. Match your schematic.
+
+config DISPLAY_ST7735_PINOUT_SCHEMATIC
+    bool "From schematic A (CS=13, DC=12, RST=11, MOSI=14, SCK=16, BL=10)"
+    help
+        First schematic: SPI CS=13, DC=12, RST=11, MOSI=14, SCK=16.
+
+config DISPLAY_ST7735_PINOUT_SCHEMATIC_B
+    bool "Customer/seller confirmed (TFT: MOSI=11, SCLK=10, CS=12, DC=13, RST=14, BL=8)"
+    help
+        Seller/customer confirmed: TFT_MOSI=11, TFT_SCLK=10, TFT_CS=12,
+        TFT_DC=13, TFT_RST=14. Backlight=8. SD card uses 15,16,17,18,47,48.
+
+config DISPLAY_ST7735_PINOUT_LILYGO
+    bool "LilyGo T-Dongle S3 (DC=2, CS=4, RST=1, MOSI=3, SCK=5, BL=37)"
+
+config DISPLAY_ST7735_PINOUT_POCKET_ALT
+    bool "Pocket-Dongle-S3 / N16R8 (CS=16, MOSI=17, SCK=18, DC=4, RST=5, BL=37)"
+
+config DISPLAY_ST7735_PINOUT_POCKET_DEVKIT
+    bool "ESP32-S3 Pocket DevKit / Supermini (CS=9, DC=10, RST=11, MOSI=12, SCK=13, BL=8)"
+    help
+        Common for "ESP32 S3 Pocket Development Board" 0.96" ST7735 80x160
+        (TFT_eSPI style: CS=9, DC=10, RST=11, SDA=12, SCL=13, backlight=8).
+
+endchoice
+
+config DISPLAY_ST7735_PANEL_OFFSET_0_0
+    bool "Panel with no offset (0,0) - try if display stays black with backlight"
+    default n
+    help
+        Some 80x160 clones use 0,0 for first pixel instead of (26,1).
+        Enable this if you see backlight but no image.
+
+config DISPLAY_ST7735_SPI_MODE_3
+    bool "Use SPI mode 3 (try if display stays blank with mode 0)"
+    default n
+    help
+        Some ST7735 panels need CPOL=1 CPHA=1 (mode 3) instead of 0.
+
+config DISPLAY_ST7735_BACKLIGHT_ACTIVE_LOW
+    bool "Backlight is active-low (try if backlight never turns on)"
+    default n
+    help
+        If your board turns backlight on with LOW instead of HIGH, enable this.
+
+config DISPLAY_ST7735_RAW_FILL_TEST
+    bool "After init: raw full-controller fill test (132x162, no offset)"
+    default y
+    help
+        Fills the entire controller window (0,0)-(131,161) with green to verify
+        SPI and wiring. Disable to skip if you know the panel works.
+
+config DISPLAY_ST7735_TEXT_ROTATE_90
+    bool "Draw text rotated 90° clockwise"
+    default n
+    help
+        When set, each character is drawn rotated 90° so text runs along
+        the long axis of the 80x160 portrait display.
+
+endmenu

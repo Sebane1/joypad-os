@@ -180,7 +180,7 @@ make usb2uart      # USB → UART (ESP32 Bluetooth bridge)
 
 ### ESP32-S3 (BT2USB)
 
-Requires ESP-IDF v6.0+ (separate from the ARM toolchain). See [ESP32 docs](ESP32.md) for full setup.
+Requires ESP-IDF v5.5.x or v6.x (separate from the ARM toolchain). See [ESP32 docs](ESP32.md) for full setup.
 
 ```bash
 make bt2usb_esp32s3                 # Build

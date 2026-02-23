@@ -2,6 +2,10 @@
 //
 // Implements the flash.h API using ESP-IDF NVS (Non-Volatile Storage).
 // Same flash_t struct, just stored in NVS instead of raw flash.
+//
+// To wipe config when stuck (e.g. in XInput with no CDC serial): erase full
+// flash then reflash, e.g. idf.py -p COM78 erase-flash && idf.py -p COM78 flash,
+// or from esp/: make flash-wipe PORT=COM78
 
 #include "core/services/storage/flash.h"
 #include "platform/platform.h"

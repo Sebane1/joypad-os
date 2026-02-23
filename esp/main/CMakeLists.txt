@@ -18,6 +18,7 @@ set(SRCS
     "flash_esp32.c"
     "ws2812_esp32.c"
     "button_esp32.c"
+    "display_st7735.c"
     "btstack_hal_esp32.c"
     "${SHARED_SRC}/platform/esp32/platform_esp32.c"
 
@@ -81,6 +82,10 @@ set(SRCS
     "${SHARED_SRC}/bt/bthid/devices/vendors/microsoft/xbox_bt.c"
     "${SHARED_SRC}/bt/bthid/devices/vendors/microsoft/xbox_ble.c"
     "${SHARED_SRC}/bt/bthid/devices/vendors/google/stadia_bt.c"
+
+    # --- JOCP WiFi (ESP32 only; Pico uses wifi_transport.c) ---
+    "${SHARED_SRC}/wifi/jocp/jocp_input.c"
+    "${SHARED_SRC}/wifi/jocp/wifi_transport_esp32.c"
 
     # --- BTstack host + transport ---
     "${SHARED_SRC}/bt/btstack/btstack_host.c"
@@ -153,6 +158,7 @@ set(INCLUDE_DIRS
     "."
     "${SHARED_SRC}"
     "${SHARED_SRC}/apps/bt2usb"
+    "${SHARED_SRC}/wifi/jocp"
     "${SHARED_SRC}/usb/usbd"
     "${SHARED_SRC}/bt"
     "${SHARED_SRC}/bt/btstack"
@@ -181,9 +187,13 @@ idf_component_register(
     REQUIRES
         bt
         nvs_flash
+        driver
         esp_driver_gpio
         esp_timer
         esp_hw_support
+        esp_wifi
+    PRIV_REQUIRES
+        usb
 )
 
 # ============================================================================

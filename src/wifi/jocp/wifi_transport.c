@@ -87,19 +87,13 @@ bool wifi_transport_init(const wifi_transport_config_t* cfg)
         return false;
     }
 
-    // Generate unique SSID from board ID
+    // Generate unique SSID from board ID; fixed simple password (WPA2 needs 8+ chars)
     pico_unique_board_id_t board_id;
     pico_get_unique_board_id(&board_id);
     snprintf(ap_ssid, sizeof(ap_ssid), "%s%02X%02X",
              config.ssid_prefix,
              board_id.id[6], board_id.id[7]);
-
-    // Derive password from SSID suffix (repeat suffix twice)
-    // SSID: JOYPAD-A7B3 -> Password: A7B3A7B3
-    // This allows iOS app to compute password from discovered SSID
-    snprintf(ap_password, sizeof(ap_password), "%02X%02X%02X%02X",
-             board_id.id[6], board_id.id[7],
-             board_id.id[6], board_id.id[7]);
+    snprintf(ap_password, sizeof(ap_password), "%s", "slimevr1");
 
     printf("[wifi] Starting AP: %s\n", ap_ssid);
     printf("[wifi] Password: %s\n", ap_password);

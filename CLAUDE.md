@@ -328,7 +328,8 @@ The `bt2usb` app also runs on ESP32-S3, using BLE (no Classic BT) for controller
 
 ```bash
 # Prerequisites: ESP-IDF v6.0+ installed at ~/esp-idf
-make bt2usb_esp32s3          # Build
+make bt2usb_esp32s3          # Build (default: devkit)
+make bt2usb_esp32s3_pocket_dongle_s3  # Build for Pocket-Dongle-S3 / T-Dongle S3 (16MB)
 make flash-bt2usb_esp32s3    # Flash via esptool
 make monitor-bt2usb_esp32s3  # UART serial monitor
 ```

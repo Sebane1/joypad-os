@@ -46,7 +46,7 @@ static char ap_ip_str[16];
 static dhcp_server_t dhcp_server;
 
 // TCP client tracking (for control channel)
-#define MAX_TCP_CLIENTS 4
+#define MAX_TCP_CLIENTS 10
 typedef struct {
     struct tcp_pcb* pcb;
     uint32_t ip;

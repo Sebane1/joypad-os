@@ -18,7 +18,7 @@
 // STATE
 // ============================================================================
 
-#define MAX_CONTROLLERS 4
+#define MAX_CONTROLLERS 10
 
 typedef struct {
     bool active;

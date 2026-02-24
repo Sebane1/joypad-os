@@ -33,7 +33,7 @@ static const char* TAG = "wifi_jocp";
 // CONFIG
 // ============================================================================
 
-#define MAX_TCP_CLIENTS 4
+#define MAX_TCP_CLIENTS 10
 #define NVS_WIFI_NAMESPACE "joypad_wifi"
 #define NVS_KEY_STA_SSID   "sta_ssid"
 #define NVS_KEY_STA_PASS   "sta_pass"

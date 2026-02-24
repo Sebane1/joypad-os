@@ -86,6 +86,7 @@ set(SRCS
     # --- JOCP WiFi (ESP32 only; Pico uses wifi_transport.c) ---
     "${SHARED_SRC}/wifi/jocp/jocp_input.c"
     "${SHARED_SRC}/wifi/jocp/wifi_transport_esp32.c"
+    "${SHARED_SRC}/wifi/jocp/wifi_config_http.c"
 
     # --- BTstack host + transport ---
     "${SHARED_SRC}/bt/btstack/btstack_host.c"
@@ -192,6 +193,7 @@ idf_component_register(
         esp_timer
         esp_hw_support
         esp_wifi
+        esp_http_server
     PRIV_REQUIRES
         usb
 )

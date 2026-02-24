@@ -444,13 +444,9 @@ bool usbd_set_mode(usb_output_mode_t mode)
     // Brief delay to allow flash write to complete
     platform_sleep_ms(50);
 
-    // Trigger device reset to re-enumerate with new descriptors
-    printf("[usbd] Resetting device for re-enumeration...\n");
-    flush_debug_output();
-    // Short delay so UI (e.g. LCD "Btn: Mode") can update before reboot
-    platform_sleep_ms(200);
-    printf("[usbd] Calling platform_reboot() now.\n");
-    flush_debug_output();
+    // Reboot to re-enumerate with new descriptors. Keep pre-reboot minimal
+    // so we don't block on USB/printf (can freeze on some platforms).
+    platform_sleep_ms(100);
     platform_reboot();
 
     return true;  // Never reached
@@ -492,23 +488,34 @@ void usbd_get_mode_color(usb_output_mode_t mode, uint8_t *r, uint8_t *g, uint8_t
 
 usb_output_mode_t usbd_get_next_mode(void)
 {
-    // Cycle through common modes: SInput → XInput → PS3 → PS4 → Switch → KB/Mouse → SInput
-    // (Skip less common: DInput, PS Classic, Xbox Original, Xbox One, XAC)
+    // Cycle: SInput → XInput → PS3 → PS4 → Switch → KB/Mouse → (wrap) SInput
+    // Any other current mode (HID, PS Classic, etc.) also wraps to SInput
+    usb_output_mode_t next;
     switch (output_mode) {
         case USB_OUTPUT_MODE_SINPUT:
-            return USB_OUTPUT_MODE_XINPUT;
+            next = USB_OUTPUT_MODE_XINPUT;
+            break;
         case USB_OUTPUT_MODE_XINPUT:
-            return USB_OUTPUT_MODE_PS3;
+            next = USB_OUTPUT_MODE_PS3;
+            break;
         case USB_OUTPUT_MODE_PS3:
-            return USB_OUTPUT_MODE_PS4;
+            next = USB_OUTPUT_MODE_PS4;
+            break;
         case USB_OUTPUT_MODE_PS4:
-            return USB_OUTPUT_MODE_SWITCH;
+            next = USB_OUTPUT_MODE_SWITCH;
+            break;
         case USB_OUTPUT_MODE_SWITCH:
-            return USB_OUTPUT_MODE_KEYBOARD_MOUSE;
+            next = USB_OUTPUT_MODE_KEYBOARD_MOUSE;
+            break;
         case USB_OUTPUT_MODE_KEYBOARD_MOUSE:
         default:
-            return USB_OUTPUT_MODE_SINPUT;
+            next = USB_OUTPUT_MODE_SINPUT;  /* wrap to start */
+            break;
     }
+    if (next >= USB_OUTPUT_MODE_COUNT) {
+        next = USB_OUTPUT_MODE_SINPUT;
+    }
+    return next;
 }
 
 bool usbd_reset_to_hid(void)

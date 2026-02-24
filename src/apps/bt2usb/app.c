@@ -23,6 +23,7 @@
 #ifdef BTSTACK_USE_ESP32
 #include "driver/gpio.h"
 #include "wifi/jocp/jocp.h"
+#include "wifi/jocp/jocp_ble_server.h"
 #include "wifi/jocp/wifi_transport.h"
 #include "usb/usbd/cdc/cdc_commands.h"
 #include "display_st7735.h"
@@ -275,6 +276,7 @@ void app_init(void)
     } else {
         printf("[app:bt2usb] WARNING: WiFi JOCP init failed\n");
     }
+    jocp_ble_server_init();
     // ST7735 display (Pocket-Dongle-S3 / T-Dongle S3)
     display_available = display_init();
     if (display_available) {
@@ -445,7 +447,7 @@ void app_task(void)
 
     // Update LED status (BLE + WiFi controller count)
 #ifdef BTSTACK_USE_ESP32
-    leds_set_connected_devices(btstack_classic_get_connection_count() + jocp_get_connected_count());
+    leds_set_connected_devices(btstack_classic_get_connection_count() + jocp_get_connected_count() + (jocp_ble_is_connected() ? 1 : 0));
     app_display_status_update(display_available);
 #else
     leds_set_connected_devices(btstack_classic_get_connection_count());
@@ -468,6 +470,7 @@ void app_task(void)
 #ifdef BTSTACK_USE_ESP32
             // Also send feedback to WiFi JOCP controllers (rumble, LED)
             jocp_send_feedback_all(&fb);
+            jocp_ble_send_feedback(&fb);
 #endif
         }
     }

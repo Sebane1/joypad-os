@@ -15,12 +15,16 @@
 #if (CFG_TUD_ENABLED && CFG_TUD_XINPUT)
 
 #include "tud_xinput.h"
+#include "platform/platform.h"
 #include <string.h>
 #include "lib/libxsm3/xsm3.h"
 
 // ============================================================================
 // INTERNAL STATE
 // ============================================================================
+
+// Per-device serial for 0x81 GET_SERIAL so the console treats each dongle as a separate controller
+static uint8_t _xinput_id_data[XSM3_SERIAL_LEN];
 
 typedef struct {
     uint8_t itf_num;
@@ -216,10 +220,10 @@ bool tud_xinput_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_contr
 
         switch (request->bRequest) {
             case XSM3_REQ_GET_SERIAL: {
-                // 0x81: Return 29-byte identification data
+                // 0x81: Return 29-byte identification data (unique per device so console challenges each)
                 TU_LOG1("[XINPUT] Auth: GET_SERIAL\r\n");
                 tud_control_xfer(rhport, request,
-                                 (void*)xsm3_id_data_ms_controller,
+                                 (void*)_xinput_id_data,
                                  XSM3_SERIAL_LEN);
                 return true;
             }
@@ -383,11 +387,22 @@ bool tud_xinput_get_output(xinput_out_report_t* output)
 void tud_xinput_xsm3_init(void)
 {
     xsm3_initialise_state();
-    xsm3_set_identification_data(xsm3_id_data_ms_controller);
+
+    // Build per-device serial so Xbox 360 sends challenge to each dongle (bytes 5..16 = serial)
+    memcpy(_xinput_id_data, xsm3_id_data_ms_controller, XSM3_SERIAL_LEN);
+    uint8_t uid[8];
+    platform_get_unique_id(uid, sizeof(uid));
+    memcpy(_xinput_id_data + 5, uid, 8);
+    // Recalculate checksum (XOR of bytes 5..27, stored in byte 28)
+    uint8_t ck = 0;
+    for (int i = 5; i < 28; i++) ck ^= _xinput_id_data[i];
+    _xinput_id_data[28] = ck;
+    xsm3_set_identification_data(_xinput_id_data);
+
     _auth_state = XSM3_AUTH_IDLE;
     _auth_response_len = 0;
     _auth_request_id = 0;
-    TU_LOG1("[XINPUT] XSM3 auth initialized\r\n");
+    TU_LOG1("[XINPUT] XSM3 auth initialized (unique serial)\r\n");
 }
 
 void tud_xinput_xsm3_process(void)

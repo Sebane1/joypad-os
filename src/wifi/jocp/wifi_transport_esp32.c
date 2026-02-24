@@ -274,11 +274,11 @@ bool wifi_transport_init(const wifi_transport_config_t* cfg)
 
     memcpy(&config, cfg, sizeof(config));
 
-    // Unique AP SSID from MAC (used when in AP mode)
+    // Unique AP SSID from MAC (use last 2 bytes so each device differs; id[0..5] = MAC)
     uint8_t id[8];
     platform_get_unique_id(id, sizeof(id));
     snprintf(ap_ssid, sizeof(ap_ssid), "%s%02X%02X",
-             config.ssid_prefix, id[6], id[7]);
+             config.ssid_prefix, id[4], id[5]);
     (void)snprintf(ap_password, sizeof(ap_password), "%s", "slimevr1");
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -295,7 +295,7 @@ bool wifi_transport_init(const wifi_transport_config_t* cfg)
         esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
 
         // Hostname for DHCP/mDNS: "Joypad-XXXX" (same suffix as AP SSID); applied again in STA_START handler
-        snprintf(sta_hostname, sizeof(sta_hostname), "Joypad-%02X%02X", id[6], id[7]);
+        snprintf(sta_hostname, sizeof(sta_hostname), "Joypad-%02X%02X", id[4], id[5]);
         esp_netif_set_hostname(sta_netif, sta_hostname);
         ESP_LOGI(TAG, "STA hostname: %s", sta_hostname);
 

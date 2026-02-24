@@ -19,9 +19,9 @@ bool wifi_sta_creds_save(const char* ssid, const char* pass);
 // Clear saved STA credentials (e.g. to force AP-only mode again).
 void wifi_sta_creds_clear(void);
 
-// Start the config HTTP server (when in AP mode). Serves GET / with a form
-// and POST /wifi to save credentials and reboot.
-void wifi_config_http_start(void);
+// Start the config HTTP server. sta_only: false = AP mode (full form + clear);
+// true = STA mode (clear-only page to return to AP on next boot).
+void wifi_config_http_start(bool sta_only);
 void wifi_config_http_stop(void);
 
 #ifdef __cplusplus

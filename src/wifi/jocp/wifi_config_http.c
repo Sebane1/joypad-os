@@ -23,6 +23,19 @@ static const char* TAG = "wifi_cfg_http";
 
 static httpd_handle_t server = NULL;
 static TimerHandle_t reboot_timer = NULL;
+static bool sta_only_mode = false;
+
+// STA mode: simple page to clear WiFi and return to AP on next boot
+static const char HTML_STA_PAGE[] =
+    "<!DOCTYPE html><html><head><meta name=viewport content=\"width=device-width,initial-scale=1\">"
+    "<title>Joypad WiFi</title></head><body style=\"font-family:sans-serif;max-width:320px;margin:2em auto\">"
+    "<h1>WiFi</h1>"
+    "<p>Dongle is connected to your router. To switch back to access point mode (JOYPAD-XXXX), clear saved WiFi.</p>"
+    "<form method=post action=/wifi/clear>"
+    "<button type=submit style=\"background:#c00;color:#fff;border:none;padding:0.5em 1em;font-size:1em\">Clear saved WiFi and reboot</button>"
+    "</form>"
+    "<p style=\"margin-top:1em;color:#666;font-size:0.9em\">Next boot will start as access point. Connect to JOYPAD-XXXX to set a different network.</p>"
+    "</body></html>";
 
 static const char HTML_FORM[] =
     "<!DOCTYPE html><html><head><meta name=viewport content=\"width=device-width,initial-scale=1\">"
@@ -91,7 +104,11 @@ static void parse_form(const char* body, size_t len, char* ssid, size_t ssid_siz
 static esp_err_t get_root_handler(httpd_req_t* req)
 {
     httpd_resp_set_type(req, "text/html");
-    httpd_resp_send(req, HTML_FORM, sizeof(HTML_FORM) - 1);
+    if (sta_only_mode) {
+        httpd_resp_send(req, HTML_STA_PAGE, sizeof(HTML_STA_PAGE) - 1);
+    } else {
+        httpd_resp_send(req, HTML_FORM, sizeof(HTML_FORM) - 1);
+    }
     return ESP_OK;
 }
 
@@ -148,10 +165,11 @@ static esp_err_t post_wifi_clear_handler(httpd_req_t* req)
     return ESP_OK;
 }
 
-void wifi_config_http_start(void)
+void wifi_config_http_start(bool sta_only)
 {
     if (server) return;
 
+    sta_only_mode = sta_only;
     reboot_timer = xTimerCreate("reboot", pdMS_TO_TICKS(REBOOT_DELAY_MS), pdFALSE, NULL, reboot_timer_cb);
     if (!reboot_timer) {
         ESP_LOGE(TAG, "Timer create failed");
@@ -186,7 +204,11 @@ void wifi_config_http_start(void)
     httpd_register_uri_handler(server, &post_wifi);
     httpd_register_uri_handler(server, &post_wifi_clear);
 
-    ESP_LOGI(TAG, "Config server http://192.168.4.1:%d/", CONFIG_HTTP_PORT);
+    if (sta_only_mode) {
+        ESP_LOGI(TAG, "Config server (STA) http://<dongle-ip>:%d/", CONFIG_HTTP_PORT);
+    } else {
+        ESP_LOGI(TAG, "Config server http://192.168.4.1:%d/", CONFIG_HTTP_PORT);
+    }
 }
 
 void wifi_config_http_stop(void)
@@ -202,7 +224,7 @@ void wifi_config_http_stop(void)
 
 #else
 
-void wifi_config_http_start(void) { (void)0; }
+void wifi_config_http_start(bool sta_only) { (void)sta_only; }
 void wifi_config_http_stop(void)  { (void)0; }
 
 #endif

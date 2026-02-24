@@ -335,6 +335,7 @@ bool wifi_transport_init(const wifi_transport_config_t* cfg)
                 ap_ready = true;
                 ESP_LOGI(TAG, "STA connected. JOCP at %s:%d (UDP) / %d (TCP)",
                          ap_ip_str, config.udp_port, config.tcp_port);
+                wifi_config_http_start(true);  /* clear-only page at http://<ip>/ */
                 return true;
             }
         }
@@ -388,7 +389,7 @@ bool wifi_transport_init(const wifi_transport_config_t* cfg)
     ap_ready = true;
     ESP_LOGI(TAG, "WiFi AP ready. Connect to %s, then JOCP to %s:%d",
              ap_ssid, ap_ip_str, config.udp_port);
-    wifi_config_http_start();
+    wifi_config_http_start(false);
     return true;
 }
 
@@ -396,7 +397,7 @@ void wifi_transport_deinit(void)
 {
     if (!initialized) return;
     ap_ready = false;
-    if (!sta_mode) wifi_config_http_stop();
+    wifi_config_http_stop();
 
     if (udp_socket >= 0) {
         close(udp_socket);
